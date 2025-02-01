@@ -2,7 +2,7 @@ import os
 import sqlite3
 from datetime import datetime
 import json
-from app_types import TextResult  # Import TextResult from the other file
+from modules.app_types import TextResult  # Import TextResult from the other file
 
 # SQLite database setup
 DB_PATH = 'ocr_results.db'  # Path to the SQLite database file

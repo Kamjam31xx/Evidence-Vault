@@ -4,12 +4,12 @@ import sqlite3
 from PIL import Image
 import pytesseract
 import easyocr
-from app_types import TextResult
+from modules.app_types import TextResult
 import time
 import numpy as np
-from string_comparison import _levenshtein_similarity, _sequence_matcher
+from modules.string_comparison import _levenshtein_similarity, _sequence_matcher
 import cv2
-from app_colors import *
+from modules.app_colors import *
 
 initialization_time = time.time()
 total_processed_files_counter = 0
