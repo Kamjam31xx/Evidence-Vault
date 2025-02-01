@@ -12,9 +12,17 @@ import cv2
 from app_colors import *
 
 initialization_time = time.time()
+total_processed_files_counter = 0
+total_tesseract_scans_counter = 0
+total_tesseract_time = 0
+total_easyocr_scans_counter = 0
+total_easyocr_time = 0
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 VISUALIZE = False
 DIAGNOSTIC_LOGGING = False
+
+
+
 
 
 # Argument parser setup
@@ -31,6 +39,7 @@ TESSERACT_ENGINE = "tesseract_engine"
 EASYOCR_ENGINE = "easyocr_engine"
 
 results = []
+failure_paths = []
 
 # Instantiate the EasyOCR reader outside of the function, so it's reused
 easyocr_reader = easyocr.Reader(['en'])
@@ -66,6 +75,7 @@ def segment_image_for_easyocr(image_path, segment_height=2560, overlap=200):
 
 #warning ai code
 def process_image_with_easyocr(image_path):
+    global total_easyocr_scans_counter
     # Segment the image
     segment_height = 2560
     segment_overlap = 200
@@ -76,6 +86,7 @@ def process_image_with_easyocr(image_path):
     for i in range(len(segments)) :
         np_image = np.array(segments[i].convert('RGB'))
         results = easyocr_reader.readtext(np_image, min_size=10, text_threshold=0.5, low_text=0.25, link_threshold=0.2)
+        total_easyocr_scans_counter += 1
         for (_, text, _) in results :
             full_text[i].append(text)
             DIAGNOSTIC_LOGGING and print("log[",i,"] : ",text)
@@ -240,26 +251,44 @@ def process_image_with_easyocr(image_path):
 def perform_ocr_on_file(file_path, engine_name):
     start_time = time.time()
     #print(f"<task started> [{engine_name} ocr : {file_path}]")
+    global total_tesseract_scans_counter
+    global total_tesseract_time
+    global total_easyocr_time
+    DIAGNOSTIC_LOGGING and print(file_path)
     if engine_name == TESSERACT_ENGINE:
         img = Image.open(file_path)
         custom_config = r'--psm 6'
-        tesseract_txt = pytesseract.image_to_string(img, config=custom_config)
-        elapsed_time = time.time() - start_time
-        print(f"<task completed> [{engine_name} ocr : {file_path}]", elapsed_time, " seconds")
-        return TextResult(text=tesseract_txt, engine_name=TESSERACT_ENGINE, file_path=file_path)
+        try:
+            tesseract_txt = pytesseract.image_to_string(img, config=custom_config)
+            elapsed_time = time.time() - start_time
+            time_string = str(elapsed_time)[0:6]
+            print(f"<task completed> [{engine_name} ocr : {file_path}]", time_string, " seconds")
+            total_tesseract_scans_counter += 1
+            total_tesseract_time += elapsed_time
+            return TextResult(text=tesseract_txt, engine_name=TESSERACT_ENGINE, file_path=file_path)
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
+            failure_paths.append(file_path)
+            return  None
+
     elif engine_name == EASYOCR_ENGINE:
-        #easyocr_output = easyocr_reader.readtext(file_path)
-        #easyocr_txt = ' '.join([text for (_, text, _) in easyocr_output])
-        easyocr_txt = process_image_with_easyocr(file_path)
-        elapsed_time = time.time() - start_time
-        print(f"<task completed> [{engine_name} ocr : {file_path}]", elapsed_time, " seconds")
-        return TextResult(text=easyocr_txt, engine_name=EASYOCR_ENGINE, file_path=file_path)
-    #elapsed_time = time.time() - start_time
-    #print(f"<task completed> [{engine_name} ocr : {file_path}]", elapsed_time, " seconds")
+        try:
+            easyocr_txt = process_image_with_easyocr(file_path)
+            elapsed_time = time.time() - start_time
+            time_string = str(elapsed_time)[0:6]
+            print(f"<task completed> [{engine_name} ocr : {file_path}]", time_string, " seconds")
+            total_easyocr_time += elapsed_time
+            return TextResult(text=easyocr_txt, engine_name=EASYOCR_ENGINE, file_path=file_path)
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
+            failure_paths.append(file_path)
+            return  None
+
     return None
 
 # Function to process a directory (recursively or not)
 def process_directory(directory, recursive=False):
+    global total_processed_files_counter
     for root, _, files in os.walk(directory):
         for file in files:
             file_path = os.path.join(root, file)
@@ -274,6 +303,7 @@ def process_directory(directory, recursive=False):
                 elif args.action_e:
                     # Perform OCR with EasyOCR only
                     results.append(perform_ocr_on_file(file_path, EASYOCR_ENGINE))
+                total_processed_files_counter += 1
         if not recursive:
             break  # Stop recursion if not set to walk recursively
 
@@ -302,8 +332,25 @@ else:
 
 # Print results
 for it in results:
-    json_string = it.serialize()
-    print(json_string)
-    #for key,value in dictionary :
-    #    print(f"{key}: {value}")
-print(f"<tasks complete> {time.time() - initialization_time} seconds")
+    if(it == None):
+        continue
+    else:
+        json_string = it.serialize()
+        print(json_string)
+
+print("")
+print(f"____<results>____")
+print("")
+print(f"There were {len(failure_paths)} files which failed to scan")
+for it in failure_paths :
+    print(f"    <failure> {it}")
+print("")
+total_elapsed_time = time.time() - initialization_time
+print(f"processed {total_processed_files_counter} files in {str(total_elapsed_time)[0:10]} seconds")
+print("tesseract performed ", total_tesseract_scans_counter, " scans in ", total_tesseract_time, " seconds")
+print("easyocr performed ", total_easyocr_scans_counter, " scans in ", total_easyocr_time, " seconds")
+print("all scans ", total_easyocr_scans_counter + total_tesseract_scans_counter)
+print("")
+print("time spent not scanning ", total_elapsed_time - (total_easyocr_time + total_tesseract_time), " seconds")
+print("")
+print(f"____<results>____")
