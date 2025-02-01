@@ -32,4 +32,5 @@ Using a terminal we can give the OCR tool a path for a file, or a directory. Giv
 - ` -e `: Use EasyOCR engine
 - ` --recursive `: Walk through directories recursively
 
-![image](https://github.com/user-attachments/assets/332615b4-6d14-4554-883c-4b53b1cf4a86)
+# Terminal example
+![image](https://github.com/user-attachments/assets/e25e228e-4e5c-45dd-b841-b21d96f0bd22)
