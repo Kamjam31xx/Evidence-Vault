@@ -2,7 +2,7 @@
 A tool for automatically scanning evidence to extract useful information with OCR, STT, and other methods for populating a database to query &amp; visualize it.
 
 ## OCR Tool
-Using a terminal we can give the OCR tool a path for a file, or a directory. Giving a directory scans all files in the directory. Giving a directory with the --recursive flag recursively walks the sub-tree in that directory, scanning all files.
+Using a terminal we can give the OCR tool a path for a file, or a directory. Giving a directory scans all files in the directory. Giving a directory with the ` --recursive flag ` recursively walks the sub-tree in that directory, scanning all files.
 
 ### OCR Commands Example
 
@@ -27,9 +27,9 @@ Using a terminal we can give the OCR tool a path for a file, or a directory. Giv
     ```
 
 #### Flag Description:
-- `-a`: Perform OCR with all available engines
-- `-t`: Use Tesseract OCR engine
-- `-e`: Use EasyOCR engine
-- `--recursive`: Walk through directories recursively
+- ` -a `: Perform OCR with all available engines
+- ` -t `: Use Tesseract OCR engine
+- ` -e `: Use EasyOCR engine
+- ` --recursive `: Walk through directories recursively
 
 ![image](https://github.com/user-attachments/assets/e230c92f-4890-429e-9132-adaa41a214ba)
