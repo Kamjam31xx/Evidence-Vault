@@ -1,8 +1,12 @@
 # Evidence-Vault
 A tool for automatically scanning evidence to extract useful information with OCR, STT, and other methods for populating a database to query &amp; visualize it.
 
+
+
 ## OCR Tool
 Using a terminal we can give the OCR tool a path for a file, or a directory. Giving a directory scans all files in the directory. Giving a directory with the ` --recursive flag ` recursively walks the sub-tree in that directory, scanning all files.
+
+
 
 ### OCR Commands Example
 
@@ -32,9 +36,12 @@ Using a terminal we can give the OCR tool a path for a file, or a directory. Giv
 - ` -e `: Use EasyOCR engine
 - ` --recursive `: Walk through directories recursively
 
+
+
 # Terminal example
 ![image](https://github.com/user-attachments/assets/e25e228e-4e5c-45dd-b841-b21d96f0bd22)
 ![image](https://github.com/user-attachments/assets/1d2d8615-c69a-4919-9b41-d93e1f735605)
+
 
 
 # CUDA support
