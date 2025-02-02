@@ -10,18 +10,28 @@ import numpy as np
 from modules.string_comparison import _levenshtein_similarity, _sequence_matcher
 import cv2
 from modules.app_colors import *
+import json
+from datetime import datetime
+from modules.config_handler import load_config
+from modules.app_hash import get_hashes_for_file
+
+config = load_config()
 
 initialization_time = time.time()
+initialization_datetime = datetime.now().isoformat()
 total_processed_files_counter = 0
 total_tesseract_scans_counter = 0
 total_tesseract_time = 0
 total_easyocr_scans_counter = 0
 total_easyocr_time = 0
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-VISUALIZE = False
-DIAGNOSTIC_LOGGING = False
 
+pytesseract.pytesseract.tesseract_cmd = os.path.expanduser(config['OCR']['tesseract_path']) if config.has_option('OCR', 'tesseract_path') else r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+VISUALIZE = config.getboolean('OCR', 'visualize') if config.has_option('OCR', 'visualize') else False
+DIAGNOSTIC_LOGGING = config.getboolean('OCR', 'diagnostic_logging') if config.has_option('OCR', 'diagnostic_logging') else False
+LOG_RESULTS = config.getboolean('OCR', 'log_results') if config.has_option('OCR', 'log_results') else False
+LOG_INDIVIDUAL_SCAN_TIMESTAMP = config.getboolean('OCR', 'log_individual_scan_timestamp') if config.has_option('OCR', 'log_individual_scan_timestamp') else False
 
+print(f"[{initialization_datetime}] Started OCR scan")
 
 
 
@@ -43,6 +53,14 @@ failure_paths = []
 
 # Instantiate the EasyOCR reader outside of the function, so it's reused
 easyocr_reader = easyocr.Reader(['en'])
+
+def log_scan_info(operation, engine, path, duration) :
+    output = ""
+    if(LOG_INDIVIDUAL_SCAN_TIMESTAMP):
+        output += f"[{datetime.now().isoformat()}] "
+    output += f"<{operation}> {engine} \"{path}\" {duration} seconds"
+    if(LOG_RESULTS) :
+        print(output)
 
 #warning ai code
 def segment_image_for_easyocr(image_path, segment_height=2560, overlap=200):
@@ -262,7 +280,7 @@ def perform_ocr_on_file(file_path, engine_name):
             tesseract_txt = pytesseract.image_to_string(img, config=custom_config)
             elapsed_time = time.time() - start_time
             time_string = str(elapsed_time)[0:6]
-            print(f"<task completed> [{engine_name} ocr : {file_path}]", time_string, " seconds")
+            log_scan_info("OCR", engine_name, file_path, time_string)
             total_tesseract_scans_counter += 1
             total_tesseract_time += elapsed_time
             return TextResult(text=tesseract_txt, engine_name=TESSERACT_ENGINE, file_path=file_path)
@@ -276,7 +294,7 @@ def perform_ocr_on_file(file_path, engine_name):
             easyocr_txt = process_image_with_easyocr(file_path)
             elapsed_time = time.time() - start_time
             time_string = str(elapsed_time)[0:6]
-            print(f"<task completed> [{engine_name} ocr : {file_path}]", time_string, " seconds")
+            log_scan_info("OCR", engine_name, file_path, time_string)
             total_easyocr_time += elapsed_time
             return TextResult(text=easyocr_txt, engine_name=EASYOCR_ENGINE, file_path=file_path)
         except Exception as e:
@@ -330,27 +348,52 @@ elif args.folder:
 else:
     print("No valid file or directory specified.")
 
-# Print results
-for it in results:
-    if(it == None):
-        continue
-    else:
-        json_string = it.serialize()
-        print(json_string)
+if(LOG_RESULTS) :
+    for it in results:
+        if(it == None):
+            continue
+        else:
+            json_string = it.serialize()
+            print(json_string)
 
-print("")
-print(f"____<results>____")
-print("")
-print(f"There were {len(failure_paths)} files which failed to scan")
-for it in failure_paths :
-    print(f"    <failure> {it}")
-print("")
 total_elapsed_time = time.time() - initialization_time
-print(f"processed {total_processed_files_counter} files in {str(total_elapsed_time)[0:10]} seconds")
-print("tesseract performed ", total_tesseract_scans_counter, " scans in ", total_tesseract_time, " seconds")
-print("easyocr performed ", total_easyocr_scans_counter, " scans in ", total_easyocr_time, " seconds")
-print("all scans ", total_easyocr_scans_counter + total_tesseract_scans_counter)
-print("")
-print("time spent not scanning ", total_elapsed_time - (total_easyocr_time + total_tesseract_time), " seconds")
-print("")
-print(f"____<results>____")
+total_scans = total_easyocr_scans_counter + total_tesseract_scans_counter
+non_scan_time = total_elapsed_time - (total_easyocr_time + total_tesseract_time)
+current_iso_time = datetime.now().isoformat()
+
+# Human-readable console output
+print(f"[{current_iso_time}] SCAN SUMMARY")
+print(f"[{current_iso_time}] Processed {total_processed_files_counter} files in {total_elapsed_time:.3f}s")
+print(f"[{current_iso_time}] Tesseract: {total_tesseract_scans_counter} scans ({total_tesseract_time:.3f}s)")
+print(f"[{current_iso_time}] EasyOCR: {total_easyocr_scans_counter} scans ({total_easyocr_time:.3f}s)")
+print(f"[{current_iso_time}] Non-scan time: {total_elapsed_time - (total_easyocr_time + total_tesseract_time):.3f}s")
+print(f"[{current_iso_time}] Failures ({len(failure_paths)}):")
+for path in failure_paths:
+    print(f"    {path}")
+
+# Structured JSON log (save to file instead of printing)
+log_entry = {
+    "timestamp": datetime.now().isoformat(),
+    "start_timestamp": initialization_datetime,
+    "end_timestamp": current_iso_time,
+    "event_type": "scan_summary",
+    "metrics": {
+        "processed_files": total_processed_files_counter,
+        "total_time_sec": round(total_elapsed_time, 3),
+        "tesseract": {
+            "scans": total_tesseract_scans_counter,
+            "time_sec": round(total_tesseract_time, 3)
+        },
+        "easyocr": {
+            "scans": total_easyocr_scans_counter,
+            "time_sec": round(total_easyocr_time, 3)
+        },
+        "non_scan_time_sec": round(total_elapsed_time - (total_easyocr_time + total_tesseract_time), 3)
+    },
+    "failures": failure_paths
+}
+
+# Save JSON to file (appends to log file)
+with open("scan_logs.json", "a") as log_file:
+    json.dump(log_entry, log_file)
+    log_file.write("\n")

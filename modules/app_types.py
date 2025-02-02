@@ -6,6 +6,28 @@ class Dimensions:
         self.width = width
         self.height = height
 
+class FileDataHash:
+    def __init__(self, meta_hash, data_hash):
+        self.meta_hash = meta_hash
+        self.data_hash = data_hash
+
+    def to_dict(self) -> dict:
+        return {
+            "meta_hash": self.meta_hash,
+            "data_hash": self.data_hash
+        }
+    
+    def serialize(self, format: str = "json") -> str:
+        if format == "json":
+            return json.dumps(self.to_dict(), indent=4)
+        elif format == "str":
+            return str(self.to_dict())
+        else:
+            raise ValueError(f"Unsupported serialization format: {format}")
+        
+    def __repr__(self) -> str:
+        return f"DataHash(meta_hash={self.meta_hash}, data_hash={self.data_hash})"
+    
     
 
 # WARNING : AI generated class 
