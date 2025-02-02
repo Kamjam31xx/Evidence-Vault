@@ -12,22 +12,22 @@ Using a terminal we can give the OCR tool a path for a file, or a directory. Giv
 
 - **All OCR engines**:
     ```bash
-    python ocr.py -a "test_images"  # -a for all OCR engines
+    py ocr.py -a "test_images"  # -a for all OCR engines
     ```
 
 - **Tesseract OCR engine**:
     ```bash
-    python ocr.py -t "test_images"  # -t for Tesseract OCR engine
+    py ocr.py -t "test_images"  # -t for Tesseract OCR engine
     ```
 
 - **EasyOCR engine**:
     ```bash
-    python ocr.py -e "test_images"  # -e for EasyOCR engine
+    py ocr.py -e "test_images"  # -e for EasyOCR engine
     ```
 
 - **All engines with recursive directory processing**:
     ```bash
-    python ocr.py -a "test_images" --recursive  # --recursive to walk through directories
+    py ocr.py -a "test_images" --recursive  # --recursive to walk through directories
     ```
 
 #### Flag Description:
