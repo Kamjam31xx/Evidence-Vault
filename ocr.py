@@ -27,8 +27,7 @@ total_easyocr_time = 0
 
 pytesseract.pytesseract.tesseract_cmd = os.path.expanduser(config['OCR']['tesseract_path']) if config.has_option('OCR', 'tesseract_path') else r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 VISUALIZE = config.getboolean('OCR', 'visualize') if config.has_option('OCR', 'visualize') else False
-DIAGNOSTIC_LOGGING = config.getboolean('OCR', 'diagnostic_logging') if config.has_option('OCR', 'diagnostic_logging') else False
-LOG_RESULTS = config.getboolean('OCR', 'log_results') if config.has_option('OCR', 'log_results') else False
+LOG_RESULTS = config.getboolean('OCR', 'log_results') if config.has_option('OCR', 'log_results') else True
 LOG_INDIVIDUAL_SCAN_TIMESTAMP = config.getboolean('OCR', 'log_individual_scan_timestamp') if config.has_option('OCR', 'log_individual_scan_timestamp') else False
 
 print(f"[{initialization_datetime}] Started OCR scan")
@@ -67,7 +66,6 @@ def segment_image_for_easyocr(image_path, segment_height=2560, overlap=200):
 
     img = Image.open(image_path)
     width, total_height = img.size
-    DIAGNOSTIC_LOGGING and print("image size : ", width, " x ", total_height)
     segments = []
     
     y = 0
@@ -76,7 +74,6 @@ def segment_image_for_easyocr(image_path, segment_height=2560, overlap=200):
         # Calculate crop coordinates with overlap
         top = max(0, y - overlap) if y > 0 else 0
         bot = min(y + segment_height, total_height)
-        DIAGNOSTIC_LOGGING and print("top: ", top,"    bot: ", bot)
         
         # Crop segment with overlap (except first segment)
         segment = img.crop((0, top, width, bot))
@@ -107,7 +104,6 @@ def process_image_with_easyocr(image_path):
         total_easyocr_scans_counter += 1
         for (_, text, _) in results :
             full_text[i].append(text)
-            DIAGNOSTIC_LOGGING and print("log[",i,"] : ",text)
 
         
         # Convert image to OpenCV format for visualization
@@ -178,17 +174,14 @@ def process_image_with_easyocr(image_path):
                             result_copy[k].used = True
                             matches.append(b)
                             continue
-                        DIAGNOSTIC_LOGGING and print(f"{(a.center[1] - y_thresh)} <= {b.center[1]} <= {(a.center[1] + y_thresh)} == {(a.center[1] - y_thresh) <= b.center[1] <= (a.center[1] + y_thresh)}")
                 sorted_matches = sorted(matches, key=lambda el: el.center[0])
                 newBox = calculate_bounding_box_from_corners(sorted_matches)
                 newText = ""
                 for it in sorted_matches :
-                    DIAGNOSTIC_LOGGING and print(it.text)
                     newText += " " + it.text
                 
                 lines.append((newBox, newText))
-        for it in lines:
-            DIAGNOSTIC_LOGGING and print(it)
+
         if(VISUALIZE) :
             t2_index = 0
             for (box2, text2) in lines:
@@ -225,7 +218,6 @@ def process_image_with_easyocr(image_path):
     search_padding = 2
     max_string_overlap = int(segment_overlap / character_min_height) + search_padding
     for i in range(len(full_text) - 1) :
-        DIAGNOSTIC_LOGGING and print(f">>> comparisons {i}")
         first = full_text[i]
         second = full_text[i + 1]
         rangeFirstMax = max(0, len(first) - max_string_overlap)
@@ -242,9 +234,6 @@ def process_image_with_easyocr(image_path):
                 
                 score_levenshtein = _levenshtein_similarity(strA, strB)
                 score_sequence = _sequence_matcher(strA, strB)
-                
-                DIAGNOSTIC_LOGGING and print(f"comparing first:[{i}][{k}] and second[{i + 1}][{j}] <score: {score_levenshtein}, {score_sequence}>")
-                DIAGNOSTIC_LOGGING and print(f"second[{j}]  {strA}    :    first[{k}]  {strB}")
 
                 levenshtein_threshold = 0.875
                 sequence_threshold = 0.8
@@ -260,7 +249,6 @@ def process_image_with_easyocr(image_path):
         if(region_found == False) :
             for h in range(len(second)) :
                 result_text += " " + second[h]
-        DIAGNOSTIC_LOGGING and print("")
         
     cv2.destroyAllWindows()
     return result_text
@@ -272,7 +260,7 @@ def perform_ocr_on_file(file_path, engine_name):
     global total_tesseract_scans_counter
     global total_tesseract_time
     global total_easyocr_time
-    DIAGNOSTIC_LOGGING and print(file_path)
+    
     if engine_name == TESSERACT_ENGINE:
         img = Image.open(file_path)
         custom_config = r'--psm 6'
@@ -283,7 +271,7 @@ def perform_ocr_on_file(file_path, engine_name):
             log_scan_info("OCR", engine_name, file_path, time_string)
             total_tesseract_scans_counter += 1
             total_tesseract_time += elapsed_time
-            return TextResult(text=tesseract_txt, engine_name=TESSERACT_ENGINE, file_path=file_path)
+            return TextResult(text=tesseract_txt, engine_name=TESSERACT_ENGINE)
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             failure_paths.append(file_path)
@@ -296,7 +284,7 @@ def perform_ocr_on_file(file_path, engine_name):
             time_string = str(elapsed_time)[0:6]
             log_scan_info("OCR", engine_name, file_path, time_string)
             total_easyocr_time += elapsed_time
-            return TextResult(text=easyocr_txt, engine_name=EASYOCR_ENGINE, file_path=file_path)
+            return TextResult(text=easyocr_txt, engine_name=EASYOCR_ENGINE)
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             failure_paths.append(file_path)
@@ -342,19 +330,16 @@ elif args.action_e:
         results.append(perform_ocr_on_file(args.action_e, EASYOCR_ENGINE))
     elif os.path.isdir(args.action_e):
         process_directory(args.action_e, recursive=args.recursive)
-elif args.folder:
-    if os.path.isdir(args.folder):  # If folder is provided, process the directory
-        process_directory(args.folder, recursive=args.recursive)
 else:
-    print("No valid file or directory specified.")
+    print("Invalid entry")
 
-if(LOG_RESULTS) :
-    for it in results:
-        if(it == None):
-            continue
-        else:
-            json_string = it.serialize()
-            print(json_string)
+
+for it in results:
+    if(it == None):
+        continue
+    else:
+        json_string = it.serialize()
+        print(json_string)
 
 total_elapsed_time = time.time() - initialization_time
 total_scans = total_easyocr_scans_counter + total_tesseract_scans_counter

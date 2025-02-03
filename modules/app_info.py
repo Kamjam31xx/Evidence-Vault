@@ -4,7 +4,7 @@ def stt_info():
     ===========================
     This script performs Speech-to-Text (STT) on audio files using multiple STT engines:
     - speech_recognition
-    - pydub
+    - faster_whisper
     - vosk
 
     Usage:

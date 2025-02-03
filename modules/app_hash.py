@@ -1,7 +1,7 @@
 import hashlib
 import os
 import struct
-from modules.app_types import FileDataHash
+from modules.app_types import FileHash
 
 # uses odd number to avoid patterns in binary numbers
 def hash_file_data_sparse_truncated(file_path, length=16, chunk_size=4096, step=127):
@@ -51,4 +51,4 @@ def hash_file_metadata(file_path, length=16):
     return hasher.hexdigest()
 
 def get_hashes_for_file(file_path) :
-    return FileDataHash(hash_file_metadata(file_path), hash_file_data_sparse_truncated(file_path))
+    return FileHash(hash_file_metadata(file_path), hash_file_data_sparse_truncated(file_path))
