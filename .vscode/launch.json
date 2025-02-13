@@ -12,8 +12,8 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-w",
-                "test_audio"
+                "-a",
+                "test_images"
             ]
         }
     ]
